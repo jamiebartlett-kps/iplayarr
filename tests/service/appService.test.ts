@@ -5,26 +5,8 @@ import appService from '../../server/service/appService';
 import socketService from '../../server/service/socketService';
 import { App } from '../../server/types/App';
 import { AppType } from '../../server/types/AppType';
-import { QueuedStorage } from '../../server/types/QueuedStorage';
 
 jest.mock('uuid', () => ({ v4: jest.fn() }));
-
-const mockStorageData: Record<string, any> = {};
-jest.mock('../../server/types/QueuedStorage', () => {
-    const mockStorageInstance = {
-        getItem: jest.fn((key: string) => {
-            return Promise.resolve(mockStorageData[key]);
-        }),
-        setItem: jest.fn((key: string, value: any) => {
-            mockStorageData[key] = value;
-            return Promise.resolve();
-        }),
-    };
-    return {
-        QueuedStorage: jest.fn(() => mockStorageInstance),
-        __esModule: true,
-    };
-});
 
 jest.mock('../../server/facade/arrFacade', () => ({
     testConnection: jest.fn(),
@@ -44,14 +26,7 @@ jest.mock('../../server/service/socketService', () => ({
     emit: jest.fn(),
 }));
 
-const mockStorage = (QueuedStorage as jest.Mock).mock.results[0].value;
-
 describe('appService', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        Object.keys(mockStorageData).forEach((k) => delete mockStorageData[k]);
-    });
-
     it('adds a new app and assigns an ID if not present', async () => {
         const id = 'test-id';
         (uuidv4 as jest.Mock).mockReturnValue(id);
@@ -66,10 +41,8 @@ describe('appService', () => {
         const result = await appService.addApp(app);
 
         expect(result?.id).toBe(id);
-        expect(mockStorage.setItem).toHaveBeenCalledWith(
-            'apps',
-            expect.arrayContaining([expect.objectContaining({ id })])
-        );
+        const all = await appService.getAllApps();
+        expect(all).toEqual(expect.arrayContaining([expect.objectContaining({ id })]));
     });
 
     it('removes an app', async () => {
@@ -78,7 +51,7 @@ describe('appService', () => {
 
         await appService.removeApp('123');
 
-        expect(mockStorage.setItem).toHaveBeenCalledWith('apps', []);
+        expect(await appService.getAllApps()).toEqual([]);
     });
 
     it('updates an app by merging and re-adding it', async () => {
@@ -87,7 +60,7 @@ describe('appService', () => {
 
         await appService.updateApp({ id: '123', name: 'New Name' });
 
-        expect(mockStorage.setItem).toHaveBeenCalledWith('apps', [expect.objectContaining({ name: 'New Name' })]);
+        expect(await appService.getApp('123')).toEqual(expect.objectContaining({ name: 'New Name' }));
     });
 
     it('returns undefined when updating non-existent app', async () => {

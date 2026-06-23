@@ -12,24 +12,8 @@ jest.mock('../../server/utils/Utils', () => ({
     sanitizeLunrQuery: jest.fn((term) => term.replace(/[:+\-*~^]/g, ' ').replace(/\s+/g, ' ').trim()),
 }));
 
-jest.mock('../../server/types/QueuedStorage', () => {
-    const data = new Map();
-    return {
-        QueuedStorage: jest.fn().mockImplementation(() => ({
-            keys: jest.fn(() => Promise.resolve(Array.from(data.keys()))),
-            getItem: jest.fn((key) => Promise.resolve(data.get(key))),
-            setItem: jest.fn((key, value) => {
-                data.set(key, value);
-                return Promise.resolve();
-            }),
-            removeItem: jest.fn((key) => {
-                data.delete(key);
-                return Promise.resolve();
-            }),
-            values: jest.fn(() => Promise.resolve(Array.from(data.values()))),
-        })),
-    };
-});
+// Episode blobs + definitions now persist in the in-memory SQLite DB (created in
+// tests/setup.ts); no storage mock is needed.
 
 describe('episodeCacheService', () => {
     const dummyDetail = {

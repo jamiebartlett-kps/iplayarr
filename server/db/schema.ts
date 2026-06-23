@@ -61,7 +61,9 @@ export const episodeCacheDefinitions = sqliteTable('episode_cache_definitions', 
 export const episodeCache = sqliteTable('episode_cache', {
     key: text('key').primaryKey(),
     url: text('url'),
-    data: text('data', { mode: 'json' }).notNull(),
+    // nullable: episodeCacheService may store an undefined/null blob under a
+    // definition name (preserved quirk).
+    data: text('data', { mode: 'json' }),
 });
 
 // Misc runtime/bookkeeping (uptime start, redis-migration marker).

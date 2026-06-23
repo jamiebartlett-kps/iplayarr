@@ -16,8 +16,20 @@ if (dbPath !== ':memory:') {
     }
 }
 
-export const sqlite = new Database(dbPath);
-sqlite.pragma('journal_mode = WAL');
+// Cache the connection on the process object. In production this is a harmless
+// singleton; under Jest it lets the (native) better-sqlite3 instance be reused
+// across the per-file module sandboxes instead of being re-instantiated (which
+// throws on the native addon's second initialisation).
+const CACHE_KEY = '__iplayarr_sqlite__';
+const cacheHost = process as unknown as Record<string, Database.Database>;
+
+export const sqlite: Database.Database =
+    cacheHost[CACHE_KEY] ??
+    (cacheHost[CACHE_KEY] = (() => {
+        const instance = new Database(dbPath);
+        instance.pragma('journal_mode = WAL');
+        return instance;
+    })());
 
 export const db = drizzle(sqlite, { schema });
 
@@ -59,7 +71,7 @@ export function ensureSchema(): void {
         CREATE TABLE IF NOT EXISTS episode_cache (
             key TEXT PRIMARY KEY,
             url TEXT,
-            data TEXT NOT NULL
+            data TEXT
         );
         CREATE TABLE IF NOT EXISTS meta (
             key TEXT PRIMARY KEY,

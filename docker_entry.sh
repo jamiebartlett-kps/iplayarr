@@ -47,5 +47,11 @@ else
     exit 1
 fi
 
+# SQLite database directory (persistence). Ensure the runtime user can write it.
+DB_DIR=$(dirname "${DATABASE_PATH:-/config/iplayarr.db}")
+if [ -d "$DB_DIR" ]; then
+    chown -R "${EXISTING_USER}":"${GROUPNAME}" "${DB_DIR}" || { echo "Failed to change ownership of ${DB_DIR} to ${PUID}:${PGID}"; exit 1; }
+fi
+
 find /app -name "node_modules" -prune -o \! -user "$PUID" \! -group "$PGID" -exec chown "${EXISTING_USER}":"${GROUPNAME}" {} +
 exec su-exec "$EXISTING_USER" "$@"

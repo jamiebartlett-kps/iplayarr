@@ -61,5 +61,8 @@ RUN rm -rf /app/src /app/frontend
 
 ENV LOG_DIR=/logs
 
+# SQLite persistence (Drizzle). Stored under /config, which is a persisted volume.
+ENV DATABASE_PATH=/config/iplayarr.db
+
 ENTRYPOINT [ "./docker_entry.sh" ]
 CMD ["npm", "run", "start"]

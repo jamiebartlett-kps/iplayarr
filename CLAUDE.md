@@ -57,6 +57,23 @@ public/                 favicon, icons, img, shortcuts (ported from frontend/pub
   filename suffix (`.get.ts`/`.post.ts`/…); `router.all` → single handler with method checks.
 - **Error envelope:** preserve exactly `{ error, invalid_fields?, message? }` and status codes.
 
+## Persistence & caching (v2)
+- **Persistence:** SQLite via **Drizzle** (`better-sqlite3`). Schema in
+  `server/db/schema.ts`; connection + idempotent `ensureSchema()` in
+  `server/db/index.ts` (no migration files are bundled — tables are created at
+  startup). DB path via `DATABASE_PATH` (Docker: `/config/iplayarr.db`; tests:
+  `:memory:`). `drizzle.config.ts` is for `drizzle-kit` (dev only).
+- **Caching is optional Redis.** `server/service/cache/backend.ts` selects a
+  Redis backend when `REDIS_ENABLED=true` or `REDIS_HOST` is set, else an
+  in-memory TTL store. `RedisCacheService` keeps its old public API.
+  `redisService` is lazy (no client unless enabled). Recent-logs buffer is
+  in-memory; `/ping` checks SQLite.
+- **One-time migration:** `server/db/migrateFromRedis.ts` (run by the
+  `0.database` Nitro plugin) imports a legacy Redis deployment into SQLite on
+  first boot, guarded by a `meta` marker; fails fast and quietly with no Redis.
+- The `0.database` plugin (filename prefix ensures it runs first) calls
+  `ensureSchema()` → `migrateFromRedis()` → `setUptime()` before requests.
+
 ## Build / run / test
 - `npm run dev` — Nuxt dev server.
 - `npm run build` && `npm run start` — production (`node .output/server/index.mjs`). Honors `PORT` (default 4404 in Docker).
@@ -64,8 +81,10 @@ public/                 favicon, icons, img, shortcuts (ported from frontend/pub
   Tests target `server/`. Route handlers are exercised via a small h3-app +
   supertest helper (`tests/helpers/h3App.ts`); endpoint/service/facade tests call
   the (unchanged) modules directly. `tests/setup.ts` exposes h3 helpers as globals
-  (mirroring Nitro auto-imports) and `tests/nitro-globals.d.ts` declares them for
-  ts-jest type-checking.
+  (mirroring Nitro auto-imports), declares them for ts-jest in
+  `tests/nitro-globals.d.ts`, and creates a fresh in-memory SQLite DB
+  (`DATABASE_PATH=:memory:`, set by the test script) with tables cleared before
+  each test. Persistence service tests run against this real DB.
 - The CommonJS `tsconfig.json` is retained for ts-jest; Nuxt uses its generated
   `.nuxt/tsconfig.json`.
 - Known: `tests/facade/downloadFacade.test.ts` fails to load on Node 22 due to a

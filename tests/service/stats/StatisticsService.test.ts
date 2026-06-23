@@ -1,12 +1,9 @@
 import RedisCacheService from '../../../server/service/redis/redisCacheService';
-import { redis } from '../../../server/service/redis/redisService';
 import statisticsService from '../../../server/service/stats/StatisticsService';
 import { GrabHistoryEntry } from '../../../server/types/data/GrabHistoryEntry';
 import { SearchHistoryEntry } from '../../../server/types/data/SearchHistoryEntry';
 import { VideoType } from '../../../server/types/IPlayerSearchResult';
 import { FixedFIFOQueue } from '../../../server/types/utils/FixedFIFOQueue';
-
-jest.mock('../../../server/service/redis/redisService');
 
 describe('statisticsService', () => {
     // Clear history before each test run
@@ -154,29 +151,28 @@ describe('statisticsService', () => {
         expect(history).toHaveLength(0); // History should be empty
     });
 
-    it('setUptime stores current timestamp in Redis', async () => {
-        const now = 100;
-        jest.spyOn(global.Date, 'now').mockReturnValueOnce(now);
-
+    it('setUptime stores the start timestamp and getUptime returns elapsed time', async () => {
         await statisticsService.setUptime();
-
-        expect(redis.set).toHaveBeenCalledWith('iplayarr_uptime', now);
+        const result = await statisticsService.getUptime();
+        expect(result).toBeGreaterThanOrEqual(0);
+        expect(result).toBeLessThan(1000);
     });
 
     it('getUptime returns difference between now and stored uptime', async () => {
-        const now = 50000;
-        const past = now - 5000;
-        jest.spyOn(global.Date, 'now').mockReturnValue(now);
-        (redis.get as jest.Mock).mockResolvedValue(past.toString());
+        const past = Date.now() - 5000;
+        jest.spyOn(global.Date, 'now').mockReturnValue(past + 5000);
+        // Seed the stored start time directly.
+        const { db } = require('../../../server/db');
+        const { meta } = require('../../../server/db/schema');
+        db.insert(meta).values({ key: 'uptime_start', value: past.toString() }).run();
 
         const result = await statisticsService.getUptime();
 
         expect(result).toBe(5000);
+        jest.restoreAllMocks();
     });
 
     it('getUptime returns 0 if uptime is not set', async () => {
-        (redis.get as jest.Mock).mockResolvedValue(null);
-
         const result = await statisticsService.getUptime();
 
         expect(result).toBe(0);
