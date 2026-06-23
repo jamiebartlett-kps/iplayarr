@@ -25,7 +25,7 @@ export default defineNuxtConfig({
         },
     },
 
-    css: ['~/assets/styles/global.less'],
+    css: ['vue-final-modal/style.css', '~/assets/styles/global.less'],
 
     app: {
         head: {
