@@ -51,12 +51,13 @@ RUN chmod +x /redis/redis-server
 WORKDIR /app
 
 COPY package*.json ./
-COPY frontend/package*.json ./frontend/
 
-RUN npm run install:both
+RUN npm install
 COPY . .
-RUN npm run build:both
-RUN rm -rf /app/src /app/frontend/src
+RUN npm run build
+# Nitro bundles server + client into .output; legacy source trees are not needed
+# at runtime (npm run start === node .output/server/index.mjs).
+RUN rm -rf /app/src /app/frontend
 
 ENV LOG_DIR=/logs
 

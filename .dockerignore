@@ -4,7 +4,10 @@ frontend/node_modules
 .env
 .git
 dist
+.nuxt
+.output
+.data
 readme-media
 eslint.config.mjs
-jest.config.js
+jest.config.cjs
 .github

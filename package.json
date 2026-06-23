@@ -10,7 +10,7 @@
         "preview": "nuxt preview",
         "start": "node .output/server/index.mjs",
         "postinstall": "nuxt prepare",
-        "test": "cross-env NODE_ENV=test jest --collectCoverageFrom 'server/**/*.{js,ts}'",
+        "test": "cross-env NODE_ENV=test jest --collectCoverageFrom 'src/**/*.{js,ts}'",
         "test:watch": "jest --watch",
         "lint": "eslint .",
         "lint:fix": "npm run lint -- --fix",
