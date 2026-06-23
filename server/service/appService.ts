@@ -1,32 +1,34 @@
+import { eq } from 'drizzle-orm';
 import { v4 } from 'uuid';
 
+import { db } from '../db';
+import { apps as appsTable } from '../db/schema';
 import arrFacade from '../facade/arrFacade';
 import nzbFacade from '../facade/nzbFacade';
 import { App } from '../types/App';
 import { appCategories, AppFeature, appFeatures, AppType } from '../types/AppType';
 import { IplayarrParameter } from '../types/IplayarrParameters';
-import { QueuedStorage } from '../types/QueuedStorage';
 import { CreateDownloadClientForm } from '../types/requests/form/CreateDownloadClientForm';
 import { CreateIndexerForm } from '../types/requests/form/CreateIndexerForm';
 import configService from './configService';
 import socketService from './socketService';
 
-const storage: QueuedStorage = new QueuedStorage();
-
 const appService = {
     getAllApps: async (): Promise<App[]> => {
-        return (await storage.getItem('apps')) || [];
+        return db
+            .select()
+            .from(appsTable)
+            .all()
+            .map((row) => row.data);
     },
 
     getApp: async (id: string): Promise<App | undefined> => {
-        const allApps: App[] = await appService.getAllApps();
-        return allApps.find(({ id: app_id }) => app_id == id);
+        const row = db.select().from(appsTable).where(eq(appsTable.id, id)).get();
+        return row?.data;
     },
 
     removeApp: async (id: string): Promise<boolean> => {
-        let allApps: App[] = await appService.getAllApps();
-        allApps = allApps.filter(({ id: app_id }) => app_id != id);
-        await storage.setItem('apps', allApps);
+        db.delete(appsTable).where(eq(appsTable.id, id)).run();
         return true;
     },
 
@@ -51,9 +53,10 @@ const appService = {
             const id = v4();
             form.id = id;
         }
-        const allApps: App[] = await appService.getAllApps();
-        allApps.push(form);
-        await storage.setItem('apps', allApps);
+        db.insert(appsTable)
+            .values({ id: form.id, data: form })
+            .onConflictDoUpdate({ target: appsTable.id, set: { data: form } })
+            .run();
         return form;
     },
 

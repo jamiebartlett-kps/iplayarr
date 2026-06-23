@@ -3,7 +3,6 @@ import 'winston-daily-rotate-file';
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 
-import { redis } from '../service/redis/redisService';
 import { IplayarrParameter } from '../types/IplayarrParameters';
 import { LogLine, LogLineLevel } from '../types/LogLine';
 import configService from './configService';
@@ -35,6 +34,11 @@ const fileLogger = isTest
     ),
         transports: [transport as DailyRotateFile],
 });
+
+// In-memory ring buffer of the most recent log lines (was a Redis list). The app
+// is single-process, so an in-memory buffer is equivalent and needs no Redis.
+const MAX_RECENT_LOGS = 250;
+const recentLogs: LogLine[] = [];
 
 const loggingService = {
     log: (...params: any[]) => {
@@ -68,15 +72,14 @@ const loggingService = {
     publish: (logLine: LogLine) => {
         socketService.emit('log', logLine);
 
-        redis.multi()
-            .rpush('iplayarr_logs', JSON.stringify(logLine))
-            .ltrim('iplayarr_logs', -250, -1)
-            .exec();
+        recentLogs.push(logLine);
+        if (recentLogs.length > MAX_RECENT_LOGS) {
+            recentLogs.splice(0, recentLogs.length - MAX_RECENT_LOGS);
+        }
     },
 
     pushInitialLogs: async (socketId: string) => {
-        const logLines = await redis.lrange('iplayarr_logs', 0, -1);
-        logLines.map((line) => JSON.parse(line) as LogLine).forEach((logLine) => {
+        recentLogs.forEach((logLine) => {
             socketService.publish(socketId, 'log', logLine);
         });
     }

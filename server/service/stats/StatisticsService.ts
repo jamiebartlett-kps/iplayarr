@@ -1,17 +1,22 @@
+import { eq } from 'drizzle-orm';
+
+import { db } from '../../db';
+import { SqliteFIFOQueue } from '../../db/fifo';
+import { grabHistory, meta, searchHistory } from '../../db/schema';
 import { GrabHistoryEntry } from '../../types/data/GrabHistoryEntry';
 import { SearchHistoryEntry } from '../../types/data/SearchHistoryEntry';
 import { AbstractFIFOQueue } from '../../types/utils/AbstractFIFOQueue';
-import { RedisFIFOQueue } from '../../types/utils/RedisFIFOQueue';
 import RedisCacheService from '../redis/redisCacheService';
-import { redis } from '../redis/redisService';
+
+const UPTIME_KEY = 'uptime_start';
 
 class StatisticsService {
     searchHistory: AbstractFIFOQueue<SearchHistoryEntry>;
     grabHistory: AbstractFIFOQueue<GrabHistoryEntry>;
 
     constructor() {
-        this.searchHistory = new RedisFIFOQueue('search-history', 500);
-        this.grabHistory = new RedisFIFOQueue('grab-history', 500);
+        this.searchHistory = new SqliteFIFOQueue(searchHistory, 500);
+        this.grabHistory = new SqliteFIFOQueue(grabHistory, 500);
     }
 
     addSearch(entry: SearchHistoryEntry): void {
@@ -39,25 +44,31 @@ class StatisticsService {
     }
 
     async setUptime(): Promise<void> {
-        await redis.set('iplayarr_uptime', Date.now());
+        db.insert(meta)
+            .values({ key: UPTIME_KEY, value: Date.now().toString() })
+            .onConflictDoUpdate({ target: meta.key, set: { value: Date.now().toString() } })
+            .run();
     }
 
     async getUptime(): Promise<number> {
-        const uptime = await redis.get('iplayarr_uptime');
-        if (uptime) {
-            return Date.now() - parseInt(uptime);
+        const row = db.select().from(meta).where(eq(meta.key, UPTIME_KEY)).get();
+        if (row) {
+            return Date.now() - parseInt(row.value);
         } else {
             return 0;
         }
     }
 
     async getCacheSizes(): Promise<{ [key: string]: string }> {
-        const [search_size, schedule_size] = await Promise.all([RedisCacheService.getCacheSizeInMB(['search_cache_*']), RedisCacheService.getCacheSizeInMB(['schedule_cache_*'])]);
+        const [search_size, schedule_size] = await Promise.all([
+            RedisCacheService.getCacheSizeInMB(['search_cache_*']),
+            RedisCacheService.getCacheSizeInMB(['schedule_cache_*']),
+        ]);
 
         return {
             search: search_size,
-            schedule: schedule_size
-        }
+            schedule: schedule_size,
+        };
     }
 }
 

@@ -1,19 +1,15 @@
+import { eq } from 'drizzle-orm';
 import dotenv from 'dotenv';
 
+import { db } from '../db';
+import { config as configTable } from '../db/schema';
 import searchFacade from '../facade/searchFacade';
 import { IplayarrParameter } from '../types/IplayarrParameters';
-import { QueuedStorage } from '../types/QueuedStorage';
 
 dotenv.config();
 
-const storage: QueuedStorage = new QueuedStorage();
-
 export interface ConfigMap {
     [key: string]: string;
-}
-
-async function getConfigMap(): Promise<ConfigMap> {
-    return (await storage.getItem('config')) || {};
 }
 
 const configService = {
@@ -48,9 +44,9 @@ const configService = {
     } as ConfigMap,
 
     getParameter: async (parameter: IplayarrParameter): Promise<string | undefined> => {
-        const configMap = await getConfigMap();
+        const row = db.select().from(configTable).where(eq(configTable.key, parameter.toString())).get();
         return (
-            configMap[parameter.toString()] ||
+            row?.value ||
             process.env[parameter.toString()] ||
             configService.defaultConfigMap[parameter.toString()]
         );
@@ -61,19 +57,20 @@ const configService = {
     },
 
     setParameter: async (parameter: IplayarrParameter, value: string): Promise<void> => {
-        const configMap = await getConfigMap();
-        const oldValue = configMap[parameter];
-        configMap[parameter] = value;
-        await storage.setItem('config', configMap);
+        const key = parameter.toString();
+        const existing = db.select().from(configTable).where(eq(configTable.key, key)).get();
+        const oldValue = existing?.value;
+        db.insert(configTable)
+            .values({ key, value })
+            .onConflictDoUpdate({ target: configTable.key, set: { value } })
+            .run();
         if (parameter == IplayarrParameter.NATIVE_SEARCH && oldValue != value) {
             searchFacade.clearSearchCache();
         }
     },
 
     removeParameter: async (parameter: IplayarrParameter): Promise<void> => {
-        const configMap = await getConfigMap();
-        delete configMap[parameter];
-        await storage.setItem('config', configMap);
+        db.delete(configTable).where(eq(configTable.key, parameter.toString())).run();
     },
 };
 

@@ -1,12 +1,19 @@
-import { QueuedStorage } from '../types/QueuedStorage';
+import { asc, eq } from 'drizzle-orm';
+
+import { db } from '../db';
+import { history as historyTable } from '../db/schema';
 import { QueueEntry } from '../types/QueueEntry';
 import { QueueEntryStatus } from '../types/responses/sabnzbd/QueueResponse';
 import socketService from './socketService';
-const storage: QueuedStorage = new QueuedStorage();
 
 const historyService = {
     getHistory: async (): Promise<QueueEntry[]> => {
-        return (await storage.getItem('history')) ?? [];
+        return db
+            .select()
+            .from(historyTable)
+            .orderBy(asc(historyTable.id))
+            .all()
+            .map((row) => row.data);
     },
 
     addHistory: async (item: QueueEntry): Promise<void> => {
@@ -16,17 +23,13 @@ const historyService = {
             details: { ...item.details, eta: '', speed: 0, progress: 100 },
             process: undefined,
         };
-        const history: QueueEntry[] = await historyService.getHistory();
-        history.push(historyItem);
-        await storage.setItem('history', history);
-        socketService.emit('history', history);
+        db.insert(historyTable).values({ pid: historyItem.pid, data: historyItem }).run();
+        socketService.emit('history', await historyService.getHistory());
     },
 
     addRelay: async (item: QueueEntry): Promise<void> => {
-        const history: QueueEntry[] = await historyService.getHistory();
-        history.push(item);
-        await storage.setItem('history', history);
-        socketService.emit('history', history);
+        db.insert(historyTable).values({ pid: item.pid, data: item }).run();
+        socketService.emit('history', await historyService.getHistory());
     },
 
     addArchive: async (item: QueueEntry, status: QueueEntryStatus = QueueEntryStatus.CANCELLED): Promise<void> => {
@@ -36,20 +39,16 @@ const historyService = {
             details: { ...item.details, eta: '', speed: 0, progress: 100 },
             process: undefined,
         };
-        const history: QueueEntry[] = await historyService.getHistory();
-        history.push(historyItem);
-        await storage.setItem('history', history);
-        socketService.emit('history', history);
+        db.insert(historyTable).values({ pid: historyItem.pid, data: historyItem }).run();
+        socketService.emit('history', await historyService.getHistory());
     },
 
     removeHistory: async (pid: string, archive: boolean = false): Promise<void> => {
-        let history: QueueEntry[] = await historyService.getHistory();
-        const historyItem = history.find(({ pid: historyPid }) => historyPid === pid);
-        history = history.filter(({ pid: historyPid }) => historyPid !== pid);
-        await storage.setItem('history', history);
-        socketService.emit('history', history);
-        if (historyItem && archive) {
-            historyService.addArchive(historyItem as QueueEntry, QueueEntryStatus.REMOVED);
+        const existing = db.select().from(historyTable).where(eq(historyTable.pid, pid)).get();
+        db.delete(historyTable).where(eq(historyTable.pid, pid)).run();
+        socketService.emit('history', await historyService.getHistory());
+        if (existing && archive) {
+            historyService.addArchive(existing.data as QueueEntry, QueueEntryStatus.REMOVED);
         }
     },
 };

@@ -1,10 +1,10 @@
+import { eq } from 'drizzle-orm';
 import { v4 } from 'uuid';
 
+import { db } from '../db';
+import { synonyms as synonymsTable } from '../db/schema';
 import searchFacade from '../facade/searchFacade';
-import { QueuedStorage } from '../types/QueuedStorage';
 import { Synonym } from '../types/Synonym';
-
-const storage: QueuedStorage = new QueuedStorage();
 
 const synonymService = {
     getSynonym: async (inputTerm: string): Promise<Synonym | undefined> => {
@@ -17,7 +17,11 @@ const synonymService = {
     },
 
     getAllSynonyms: async (): Promise<Synonym[]> => {
-        return (await storage.getItem('synonyms')) || [];
+        return db
+            .select()
+            .from(synonymsTable)
+            .all()
+            .map((row) => row.data);
     },
 
     addSynonym: async (synonym: Synonym): Promise<void> => {
@@ -25,27 +29,23 @@ const synonymService = {
             const id = v4();
             synonym.id = id;
         }
-        const allSynonyms = await synonymService.getAllSynonyms();
-        allSynonyms.push(synonym);
-        await storage.setItem('synonyms', allSynonyms);
+        db.insert(synonymsTable)
+            .values({ id: synonym.id, data: synonym })
+            .onConflictDoUpdate({ target: synonymsTable.id, set: { data: synonym } })
+            .run();
         searchFacade.removeFromSearchCache(synonym.target);
     },
 
     updateSynonym: async (synonym: Synonym): Promise<void> => {
         await synonymService.removeSynonym(synonym.id);
-        const allSynonyms = await synonymService.getAllSynonyms();
-        allSynonyms.push(synonym);
-        await storage.setItem('synonyms', allSynonyms);
-        searchFacade.removeFromSearchCache(synonym.target);
+        await synonymService.addSynonym(synonym);
     },
 
     removeSynonym: async (id: string): Promise<void> => {
-        let allSynonyms = await synonymService.getAllSynonyms();
-        const foundSynonym: Synonym | undefined = allSynonyms.find(({ id: savedId }) => savedId == id);
+        const foundSynonym = db.select().from(synonymsTable).where(eq(synonymsTable.id, id)).get();
         if (foundSynonym) {
-            allSynonyms = allSynonyms.filter(({ id: savedId }) => savedId != id);
-            await storage.setItem('synonyms', allSynonyms);
-            searchFacade.removeFromSearchCache(foundSynonym.target);
+            db.delete(synonymsTable).where(eq(synonymsTable.id, id)).run();
+            searchFacade.removeFromSearchCache(foundSynonym.data.target);
         }
     },
 };

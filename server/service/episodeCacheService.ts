@@ -1,15 +1,19 @@
+import { eq } from 'drizzle-orm';
 import lunr from 'lunr';
 import { v4 } from 'uuid';
 
+import { db } from '../db';
+import { episodeCacheStore as storage } from '../db/episodeCacheStore';
+import { episodeCacheDefinitions } from '../db/schema';
 import { IPlayerDetails } from '../types/IPlayerDetails';
 import { IPlayerSearchResult, VideoType } from '../types/IPlayerSearchResult';
-import { QueuedStorage } from '../types/QueuedStorage';
 import { EpisodeCacheDefinition } from '../types/responses/EpisodeCacheTypes';
 import { IPlayerEpisodeMetadata } from '../types/responses/IPlayerMetadataResponse';
 import { createNZBName, getQualityProfile, removeAllQueryParams, sanitizeLunrQuery, splitArrayIntoChunks } from '../utils/Utils';
 import iplayerDetailsService from './iplayerDetailsService';
 
-const storage: QueuedStorage = new QueuedStorage();
+// Episode blobs live in the episode_cache table (via `storage`); the off-schedule
+// cache definitions live in their own relational table.
 let lunrIndex: lunr.Index;
 
 const episodeCacheService = {
@@ -56,7 +60,16 @@ const episodeCacheService = {
 
     getCachedSeries: async (): Promise<EpisodeCacheDefinition[]> => {
         await episodeCacheService.buildIndex();
-        return (await storage.getItem('series-cache-definition')) || [];
+        return db
+            .select()
+            .from(episodeCacheDefinitions)
+            .all()
+            .map((row) => ({
+                id: row.id,
+                url: row.url,
+                name: row.name,
+                cacheRefreshed: row.cacheRefreshed ?? undefined,
+            }));
     },
 
     getCachedSeriesForId: async (id: string): Promise<EpisodeCacheDefinition | undefined> => {
@@ -66,9 +79,7 @@ const episodeCacheService = {
 
     addCachedSeries: async (url: string, name: string): Promise<void> => {
         const id = v4();
-        const cachedSeries = await episodeCacheService.getCachedSeries();
-        cachedSeries.push({ url, name, id });
-        await storage.setItem('series-cache-definition', cachedSeries);
+        db.insert(episodeCacheDefinitions).values({ id, name, url, cacheRefreshed: null }).run();
     },
 
     updateCachedSeries: async (def: EpisodeCacheDefinition): Promise<void> => {
@@ -81,9 +92,9 @@ const episodeCacheService = {
         }
 
         await episodeCacheService.removeCachedSeries(def.id);
-        const cachedSeries = await episodeCacheService.getCachedSeries();
-        cachedSeries.push(def);
-        await storage.setItem('series-cache-definition', cachedSeries);
+        db.insert(episodeCacheDefinitions)
+            .values({ id: def.id, name: def.name, url: def.url, cacheRefreshed: def.cacheRefreshed ?? null })
+            .run();
     },
 
     removeCachedSeries: async (id: string): Promise<void> => {
@@ -93,9 +104,7 @@ const episodeCacheService = {
             await storage.removeItem(oldRecord.name);
         }
 
-        let cachedSeries = await episodeCacheService.getCachedSeries();
-        cachedSeries = cachedSeries.filter(({ id: savedId }) => savedId != id);
-        await storage.setItem('series-cache-definition', cachedSeries);
+        db.delete(episodeCacheDefinitions).where(eq(episodeCacheDefinitions.id, id)).run();
     },
 
     recacheAllSeries: async (): Promise<boolean> => {

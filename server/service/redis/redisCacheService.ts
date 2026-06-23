@@ -1,5 +1,8 @@
-import { redis } from './redisService';
+import { getCacheBackend } from '../cache/backend';
 
+// TTL cache keyed by `${prefix}_${key}`. Backed by Redis when enabled, otherwise
+// an in-memory store (see cache/backend.ts). Public API is unchanged so existing
+// call sites (searchFacade, iplayerDetailsService, schedule, skyhook) are intact.
 export default class RedisCacheService<T> {
     prefix: string;
     ttl: number;
@@ -20,56 +23,27 @@ export default class RedisCacheService<T> {
         }
     }
 
-    get(key: string): Promise<T | undefined> {
-        return new Promise((resolve) => {
-            redis
-                .get(`${this.prefix}_${key}`)
-                .then((data) => {
-                    if (data != null) {
-                        resolve(JSON.parse(data) as T);
-                    } else {
-                        resolve(undefined);
-                    }
-                })
-                .catch(() => resolve(undefined));
-        });
+    async get(key: string): Promise<T | undefined> {
+        const data = await getCacheBackend().get(`${this.prefix}_${key}`);
+        if (data != null) {
+            return JSON.parse(data) as T;
+        }
+        return undefined;
     }
 
     async set(key: string, value: T): Promise<void> {
-        await redis.set(`${this.prefix}_${key}`, JSON.stringify(value), 'EX', this.ttl);
+        await getCacheBackend().set(`${this.prefix}_${key}`, JSON.stringify(value), this.ttl);
     }
 
     async del(key: string): Promise<void> {
-        await redis.del(`${this.prefix}_${key}`);
+        await getCacheBackend().del(`${this.prefix}_${key}`);
     }
 
     async clear(): Promise<void> {
-        const keys = await redis.keys(`${this.prefix}_*`);
-        if (keys.length) {
-            await redis.del(keys);
-        }
+        await getCacheBackend().delByPattern(`${this.prefix}_*`);
     }
 
     static async getCacheSizeInMB(patterns: string[]): Promise<string> {
-        let totalBytes = 0;
-
-        for (const pattern of patterns) {
-            let cursor = '0';
-
-            do {
-                const [newCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
-                cursor = newCursor;
-
-                if (keys.length > 0) {
-                    const sizes = await Promise.all(
-                        keys.map(key => redis.memory('USAGE', key).catch(() => 0))
-                    );
-                    totalBytes += sizes.reduce((sum: any, size) => sum + (size || 0), 0);
-                }
-            } while (cursor !== '0');
-        }
-
-        const totalMB = totalBytes / (1024 * 1024);
-        return totalMB.toFixed(2);
+        return getCacheBackend().sizeMB(patterns);
     }
 }
