@@ -133,3 +133,6 @@ dist
 
 test-results
 .DS_Store
+.output
+.data
+.nitro
