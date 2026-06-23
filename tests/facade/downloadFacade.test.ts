@@ -1,10 +1,10 @@
 import fs from 'fs';
 
-import { timestampFile } from '../../src/constants/iPlayarrConstants';
-import downloadFacade from '../../src/facade/downloadFacade';
-import configService from '../../src/service/configService';
-import GetIplayerDownloadService from '../../src/service/download/GetIplayerDownloadService';
-import { DownloadClient } from '../../src/types/enums/DownloadClient';
+import { timestampFile } from '../../server/constants/iPlayarrConstants';
+import downloadFacade from '../../server/facade/downloadFacade';
+import configService from '../../server/service/configService';
+import GetIplayerDownloadService from '../../server/service/download/GetIplayerDownloadService';
+import { DownloadClient } from '../../server/types/enums/DownloadClient';
 
 // Mocks
 jest.mock('bcrypt', () => ({
@@ -27,33 +27,33 @@ jest.mock('child_process', () => ({
     spawn: jest.fn(),
 }));
 
-jest.mock('../../src/service/configService', () => ({
+jest.mock('../../server/service/configService', () => ({
     getParameter: jest.fn(),
 }));
 
-jest.mock('../../src/service/download/GetIplayerDownloadService', () => ({
+jest.mock('../../server/service/download/GetIplayerDownloadService', () => ({
     download: jest.fn(),
     postProcess: jest.fn(),
 }));
 
-jest.mock('../../src/service/download/YTDLPDownloadService', () => ({
+jest.mock('../../server/service/download/YTDLPDownloadService', () => ({
     download: jest.fn(),
     postProcess: jest.fn(),
 }));
 
-jest.mock('../../src/service/queueService', () => ({
+jest.mock('../../server/service/queueService', () => ({
     updateQueue: jest.fn(),
     getFromQueue: jest.fn(),
     removeFromQueue: jest.fn(),
 }));
 
-jest.mock('../../src/service/loggingService', () => ({
+jest.mock('../../server/service/loggingService', () => ({
     error: jest.fn(),
     debug: jest.fn(),
     log: jest.fn(),
 }));
 
-jest.mock('../../src/service/socketService', () => ({
+jest.mock('../../server/service/socketService', () => ({
     emit: jest.fn(),
 }));
 

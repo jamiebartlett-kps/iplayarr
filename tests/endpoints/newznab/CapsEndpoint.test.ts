@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { parseStringPromise } from 'xml2js';
 
-import CapsEndpoint from '../../../src/endpoints/newznab/CapsEndpoint';
+import CapsEndpoint from '../../../server/endpoints/newznab/CapsEndpoint';
 
 describe('CapsEndpoint', () => {
     let req: Partial<Request>;

@@ -1,18 +1,26 @@
-import express from 'express';
 import request from 'supertest';
 
-import router from '../../../src/routes/json-api/OffScheduleRoute'; // adjust if needed
-import episodeCacheService from '../../../src/service/episodeCacheService';
-import { ApiError } from '../../../src/types/responses/ApiResponse';
-import { EpisodeCacheDefinition } from '../../../src/types/responses/EpisodeCacheTypes';
-import { OffScheduleFormValidator } from '../../../src/validators/OffScheduleFormValidator';
+import offScheduleDelete from '../../../server/routes/json-api/offSchedule/index.delete';
+import offScheduleGet from '../../../server/routes/json-api/offSchedule/index.get';
+import offSchedulePost from '../../../server/routes/json-api/offSchedule/index.post';
+import offSchedulePut from '../../../server/routes/json-api/offSchedule/index.put';
+import offScheduleRefresh from '../../../server/routes/json-api/offSchedule/refresh.post';
+import episodeCacheService from '../../../server/service/episodeCacheService';
+import { ApiError } from '../../../server/types/responses/ApiResponse';
+import { EpisodeCacheDefinition } from '../../../server/types/responses/EpisodeCacheTypes';
+import { OffScheduleFormValidator } from '../../../server/validators/OffScheduleFormValidator';
+import { h3Server } from '../../helpers/h3App';
 
-jest.mock('../../../src/service/episodeCacheService');
-jest.mock('../../../src/validators/OffScheduleFormValidator');
+jest.mock('../../../server/service/episodeCacheService');
+jest.mock('../../../server/validators/OffScheduleFormValidator');
 
-const app = express();
-app.use(express.json());
-app.use('/', router);
+const app = h3Server((r) => {
+    r.get('/', offScheduleGet);
+    r.post('/', offSchedulePost);
+    r.put('/', offSchedulePut);
+    r.delete('/', offScheduleDelete);
+    r.post('/refresh', offScheduleRefresh);
+});
 
 describe('Episode Cache Router', () => {
     beforeEach(() => {

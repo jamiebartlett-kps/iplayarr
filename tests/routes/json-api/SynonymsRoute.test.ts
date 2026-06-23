@@ -1,20 +1,28 @@
-import express from 'express';
 import request from 'supertest';
 
-import arrFacade from '../../../src/facade/arrFacade';
-import router from '../../../src/routes/json-api/SynonymsRoute'; // adjust path as needed
-import appService from '../../../src/service/appService';
-import synonymService from '../../../src/service/synonymService';
-import { ApiError } from '../../../src/types/responses/ApiResponse';
-import { Synonym } from '../../../src/types/Synonym';
+import synonymLookup from '../../../server/routes/json-api/synonym/lookup/[appId].get';
+import synonymDelete from '../../../server/routes/json-api/synonym/index.delete';
+import synonymGet from '../../../server/routes/json-api/synonym/index.get';
+import synonymPost from '../../../server/routes/json-api/synonym/index.post';
+import synonymPut from '../../../server/routes/json-api/synonym/index.put';
+import arrFacade from '../../../server/facade/arrFacade';
+import appService from '../../../server/service/appService';
+import synonymService from '../../../server/service/synonymService';
+import { ApiError } from '../../../server/types/responses/ApiResponse';
+import { Synonym } from '../../../server/types/Synonym';
+import { h3Server } from '../../helpers/h3App';
 
-jest.mock('../../../src/service/synonymService');
-jest.mock('../../../src/service/appService');
-jest.mock('../../../src/facade/arrFacade');
+jest.mock('../../../server/service/synonymService');
+jest.mock('../../../server/service/appService');
+jest.mock('../../../server/facade/arrFacade');
 
-const expressApp = express();
-expressApp.use(express.json());
-expressApp.use('/', router);
+const app = h3Server((r) => {
+    r.get('/', synonymGet);
+    r.post('/', synonymPost);
+    r.put('/', synonymPut);
+    r.delete('/', synonymDelete);
+    r.get('/lookup/:appId', synonymLookup);
+});
 
 describe('Synonym and Lookup Routes', () => {
     beforeEach(() => {
@@ -26,7 +34,7 @@ describe('Synonym and Lookup Routes', () => {
             const synonyms = [{ id: 1, term: 'tv', synonym: 'television' }];
             (synonymService.getAllSynonyms as jest.Mock).mockResolvedValue(synonyms);
 
-            const res = await request(expressApp).get('/');
+            const res = await request(app).get('/');
             expect(res.status).toBe(200);
             expect(res.body).toEqual(synonyms);
         });
@@ -40,7 +48,7 @@ describe('Synonym and Lookup Routes', () => {
             (synonymService.addSynonym as jest.Mock).mockResolvedValue(undefined);
             (synonymService.getAllSynonyms as jest.Mock).mockResolvedValue(updatedSynonyms);
 
-            const res = await request(expressApp).post('/').send(synonym);
+            const res = await request(app).post('/').send(synonym);
             expect(synonymService.addSynonym).toHaveBeenCalledWith(synonym);
             expect(res.status).toBe(200);
             expect(res.body).toEqual(updatedSynonyms);
@@ -55,7 +63,7 @@ describe('Synonym and Lookup Routes', () => {
             (synonymService.updateSynonym as jest.Mock).mockResolvedValue(undefined);
             (synonymService.getAllSynonyms as jest.Mock).mockResolvedValue(updatedSynonyms);
 
-            const res = await request(expressApp).put('/').send(synonym);
+            const res = await request(app).put('/').send(synonym);
             expect(synonymService.updateSynonym).toHaveBeenCalledWith(synonym);
             expect(res.status).toBe(200);
             expect(res.body).toEqual(updatedSynonyms);
@@ -70,7 +78,7 @@ describe('Synonym and Lookup Routes', () => {
             (synonymService.removeSynonym as jest.Mock).mockResolvedValue(undefined);
             (synonymService.getAllSynonyms as jest.Mock).mockResolvedValue(updatedSynonyms);
 
-            const res = await request(expressApp).delete('/').send({ id });
+            const res = await request(app).delete('/').send({ id });
             expect(synonymService.removeSynonym).toHaveBeenCalledWith(id);
             expect(res.status).toBe(200);
             expect(res.body).toEqual(updatedSynonyms);
@@ -81,15 +89,15 @@ describe('Synonym and Lookup Routes', () => {
         it('returns search results for valid app and term', async () => {
             const appId = 'radarr';
             const term = 'star wars';
-            const app = { id: appId, name: 'Radarr' };
+            const appObj = { id: appId, name: 'Radarr' };
             const results = [{ title: 'Star Wars: A New Hope' }];
 
-            (appService.getApp as jest.Mock).mockResolvedValue(app);
+            (appService.getApp as jest.Mock).mockResolvedValue(appObj);
             (arrFacade.search as jest.Mock).mockResolvedValue(results);
 
-            const res = await request(expressApp).get(`/lookup/${appId}?term=${encodeURIComponent(term)}`);
+            const res = await request(app).get(`/lookup/${appId}?term=${encodeURIComponent(term)}`);
             expect(appService.getApp).toHaveBeenCalledWith(appId);
-            expect(arrFacade.search).toHaveBeenCalledWith(app, term);
+            expect(arrFacade.search).toHaveBeenCalledWith(appObj, term);
             expect(res.status).toBe(200);
             expect(res.body).toEqual(results);
         });
@@ -98,7 +106,7 @@ describe('Synonym and Lookup Routes', () => {
             const appId = 'nonexistent';
             (appService.getApp as jest.Mock).mockResolvedValue(undefined);
 
-            const res = await request(expressApp).get(`/lookup/${appId}`);
+            const res = await request(app).get(`/lookup/${appId}`);
             expect(res.status).toBe(400);
             expect(res.body).toMatchObject({
                 error: ApiError.INTERNAL_ERROR,
@@ -109,12 +117,12 @@ describe('Synonym and Lookup Routes', () => {
         it('returns error if arrFacade.search throws', async () => {
             const appId = 'radarr';
             const term = 'error test';
-            const app = { id: appId, name: 'Radarr' };
+            const appObj = { id: appId, name: 'Radarr' };
 
-            (appService.getApp as jest.Mock).mockResolvedValue(app);
+            (appService.getApp as jest.Mock).mockResolvedValue(appObj);
             (arrFacade.search as jest.Mock).mockRejectedValue(new Error('Something broke'));
 
-            const res = await request(expressApp).get(`/lookup/${appId}?term=${encodeURIComponent(term)}`);
+            const res = await request(app).get(`/lookup/${appId}?term=${encodeURIComponent(term)}`);
             expect(res.status).toBe(400);
             expect(res.body).toMatchObject({
                 error: ApiError.INTERNAL_ERROR,

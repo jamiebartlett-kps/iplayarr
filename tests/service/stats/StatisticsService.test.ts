@@ -1,12 +1,12 @@
-import RedisCacheService from '../../../src/service/redis/redisCacheService';
-import { redis } from '../../../src/service/redis/redisService';
-import statisticsService from '../../../src/service/stats/StatisticsService';
-import { GrabHistoryEntry } from '../../../src/types/data/GrabHistoryEntry';
-import { SearchHistoryEntry } from '../../../src/types/data/SearchHistoryEntry';
-import { VideoType } from '../../../src/types/IPlayerSearchResult';
-import { FixedFIFOQueue } from '../../../src/types/utils/FixedFIFOQueue';
+import RedisCacheService from '../../../server/service/redis/redisCacheService';
+import { redis } from '../../../server/service/redis/redisService';
+import statisticsService from '../../../server/service/stats/StatisticsService';
+import { GrabHistoryEntry } from '../../../server/types/data/GrabHistoryEntry';
+import { SearchHistoryEntry } from '../../../server/types/data/SearchHistoryEntry';
+import { VideoType } from '../../../server/types/IPlayerSearchResult';
+import { FixedFIFOQueue } from '../../../server/types/utils/FixedFIFOQueue';
 
-jest.mock('../../../src/service/redis/redisService');
+jest.mock('../../../server/service/redis/redisService');
 
 describe('statisticsService', () => {
     // Clear history before each test run

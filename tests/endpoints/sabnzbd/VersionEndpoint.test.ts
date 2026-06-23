@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 
-import VersionEndpoint from '../../../src/endpoints/sabnzbd/VersionEndpoint';
+import VersionEndpoint from '../../../server/endpoints/sabnzbd/VersionEndpoint';
 
 describe('VersionEndpoint', () => {
     it('responds with the correct version JSON', () => {

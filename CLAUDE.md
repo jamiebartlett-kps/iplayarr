@@ -61,9 +61,16 @@ public/                 favicon, icons, img, shortcuts (ported from frontend/pub
 - `npm run dev` — Nuxt dev server.
 - `npm run build` && `npm run start` — production (`node .output/server/index.mjs`). Honors `PORT` (default 4404 in Docker).
 - `npm test` — Jest (ts-jest). NOTE: `jest.config.cjs` (package is `"type":"module"`).
-  Tests still target `src/`; they are ported to `server/` as routes/services migrate.
-- The original backend `tsconfig.json` (CommonJS) is retained for ts-jest during the
-  transition; Nuxt uses its generated `.nuxt/tsconfig.json`.
+  Tests target `server/`. Route handlers are exercised via a small h3-app +
+  supertest helper (`tests/helpers/h3App.ts`); endpoint/service/facade tests call
+  the (unchanged) modules directly. `tests/setup.ts` exposes h3 helpers as globals
+  (mirroring Nitro auto-imports) and `tests/nitro-globals.d.ts` declares them for
+  ts-jest type-checking.
+- The CommonJS `tsconfig.json` is retained for ts-jest; Nuxt uses its generated
+  `.nuxt/tsconfig.json`.
+- Known: `tests/facade/downloadFacade.test.ts` fails to load on Node 22 due to a
+  `tmp`/`fengari` (ioredis-mock) `constants.O_CREAT` issue — pre-existing on
+  `main`, unrelated to app code; all 367 tests pass.
 
 ## Status
 - ✅ Phase 1 — plan committed (`docs/plans/v1-nuxt-migration.md`).
@@ -79,10 +86,11 @@ public/                 favicon, icons, img, shortcuts (ported from frontend/pub
 - ✅ Phase 7 — frontend: `app.vue` (App.vue port, ClientOnly), plugins, auth
   middleware, lib, 35 components + 12 pages. Builds; app serves.
 - ✅ Phase 8 — Docker/CI point at the Nuxt build.
-- 🔚 Parity report: `docs/plans/v1-parity-report.md`. Remaining: browser UI walk,
-  live OIDC/search/integration checks, port route/endpoint tests then delete
-  `src/` + `frontend/`.
+- ✅ Test port + cleanup — route/endpoint/service tests retargeted to `server/`;
+  legacy `src/` and `frontend/` deleted; dead deps (express/express-session/
+  connect-redis/cors/multer/module-alias/...) pruned.
+- 🔚 Parity report: `docs/plans/v1-parity-report.md`. Remaining: browser UI walk
+  and live OIDC/search/integration checks (need a browser / external services).
 
-The legacy `src/` (Express) and `frontend/` (Vue SPA) are intentionally retained
-for now: the Jest suite (367 tests) still targets them. Build & runtime use only
-the Nuxt app (`nuxt.config.ts`, `app/`, `server/`).
+The repo is now a single Nuxt app: `nuxt.config.ts`, `app/` (frontend), `server/`
+(Nitro), `public/`, `tests/`.

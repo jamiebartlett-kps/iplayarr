@@ -1,26 +1,33 @@
-import bodyParser from 'body-parser';
-import express from 'express';
 import request from 'supertest';
 
-import router from '../../src/routes/JsonApiRoute';
+import cacheRefresh from '../../server/routes/json-api/cache-refresh.get';
+import details from '../../server/routes/json-api/details.get';
+import download from '../../server/routes/json-api/download.get';
+import nzbTest from '../../server/routes/json-api/nzb/test.post';
+import search from '../../server/routes/json-api/search.get';
+import { h3Server } from '../helpers/h3App';
 
 // Mock dependencies
-jest.mock('../../src/facade/nzbFacade');
-jest.mock('../../src/facade/scheduleFacade');
-jest.mock('../../src/facade/searchFacade');
-jest.mock('../../src/service/iplayerDetailsService');
-jest.mock('../../src/service/queueService');
+jest.mock('../../server/facade/nzbFacade');
+jest.mock('../../server/facade/scheduleFacade');
+jest.mock('../../server/facade/searchFacade');
+jest.mock('../../server/service/iplayerDetailsService');
+jest.mock('../../server/service/queueService');
 
-import nzbFacade from '../../src/facade/nzbFacade';
-import scheduleFacade from '../../src/facade/scheduleFacade';
-import searchFacade from '../../src/facade/searchFacade';
-import iplayerDetailsService from '../../src/service/iplayerDetailsService';
-import queueService from '../../src/service/queueService';
-import { ApiError } from '../../src/types/responses/ApiResponse';
+import nzbFacade from '../../server/facade/nzbFacade';
+import scheduleFacade from '../../server/facade/scheduleFacade';
+import searchFacade from '../../server/facade/searchFacade';
+import iplayerDetailsService from '../../server/service/iplayerDetailsService';
+import queueService from '../../server/service/queueService';
+import { ApiError } from '../../server/types/responses/ApiResponse';
 
-const app = express();
-app.use(bodyParser.json());
-app.use(router);
+const app = h3Server((r) => {
+    r.post('/nzb/test', nzbTest);
+    r.get('/search', search);
+    r.get('/details', details);
+    r.get('/download', download);
+    r.get('/cache-refresh', cacheRefresh);
+});
 
 describe('JsonApiRoute', () => {
     describe('POST /nzb/test', () => {
@@ -32,7 +39,7 @@ describe('JsonApiRoute', () => {
                 NZB_API_KEY: 'abc123',
                 NZB_TYPE: 'nzbget',
                 NZB_USERNAME: 'user',
-                NZB_PASSWORD: 'pass'
+                NZB_PASSWORD: 'pass',
             });
 
             expect(res.status).toBe(200);
@@ -47,7 +54,7 @@ describe('JsonApiRoute', () => {
                 NZB_API_KEY: 'abc123',
                 NZB_TYPE: 'nzbget',
                 NZB_USERNAME: 'user',
-                NZB_PASSWORD: 'pass'
+                NZB_PASSWORD: 'pass',
             });
 
             expect(res.status).toBe(500);
@@ -82,11 +89,9 @@ describe('JsonApiRoute', () => {
     describe('GET /download', () => {
         it('should add item to queue and return success', async () => {
             const addToQueueMock = queueService.addToQueue as jest.Mock;
-            addToQueueMock.mockImplementation(() => { });
+            addToQueueMock.mockImplementation(() => {});
 
-            const res = await request(app)
-                .get('/download')
-                .query({ pid: 'p01xyz', nzbName: 'show.nzb', type: 'tv' });
+            const res = await request(app).get('/download').query({ pid: 'p01xyz', nzbName: 'show.nzb', type: 'tv' });
 
             expect(addToQueueMock).toHaveBeenCalledWith('p01xyz', 'show.nzb', 'tv');
             expect(res.status).toBe(200);
@@ -97,7 +102,7 @@ describe('JsonApiRoute', () => {
     describe('GET /cache-refresh', () => {
         it('should trigger cache refresh and return success', async () => {
             const refreshCacheMock = scheduleFacade.refreshCache as jest.Mock;
-            refreshCacheMock.mockImplementation(() => { });
+            refreshCacheMock.mockImplementation(() => {});
 
             const res = await request(app).get('/cache-refresh');
 

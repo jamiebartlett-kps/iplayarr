@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
 import { parseStringPromise } from 'xml2js';
 
-import SearchEndpoint from '../../../src/endpoints/newznab/SearchEndpoint';
-import searchFacade from '../../../src/facade/searchFacade';
-import statisticsService from '../../../src/service/stats/StatisticsService';
-import { VideoType } from '../../../src/types/IPlayerSearchResult';
-import * as Utils from '../../../src/utils/Utils';
+import SearchEndpoint from '../../../server/endpoints/newznab/SearchEndpoint';
+import searchFacade from '../../../server/facade/searchFacade';
+import statisticsService from '../../../server/service/stats/StatisticsService';
+import { VideoType } from '../../../server/types/IPlayerSearchResult';
+import * as Utils from '../../../server/utils/Utils';
 
-jest.mock('../../../src/facade/searchFacade');
-jest.mock('../../../src/service/stats/StatisticsService');
+jest.mock('../../../server/facade/searchFacade');
+jest.mock('../../../server/service/stats/StatisticsService');
 jest.spyOn(Utils, 'getBaseUrl').mockReturnValue('http://localhost:3000');
 jest.spyOn(Utils, 'createNZBDownloadLink').mockImplementation(() => Promise.resolve('/nzb/link.nzb'));
 

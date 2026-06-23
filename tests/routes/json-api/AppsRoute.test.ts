@@ -1,18 +1,30 @@
-import express from 'express';
 import request from 'supertest';
 
-import router from '../../../src/routes/json-api/AppsRoute'; // adjust path if needed
-import appService from '../../../src/service/appService';
-import { appFeatures } from '../../../src/types/AppType';
-import { ApiError } from '../../../src/types/responses/ApiResponse';
-import { AppFormValidator } from '../../../src/validators/AppFormValidator';
+import appsDelete from '../../../server/routes/json-api/apps/index.delete';
+import appsGet from '../../../server/routes/json-api/apps/index.get';
+import appsPost from '../../../server/routes/json-api/apps/index.post';
+import appsPut from '../../../server/routes/json-api/apps/index.put';
+import appsTest from '../../../server/routes/json-api/apps/test.post';
+import appsTypes from '../../../server/routes/json-api/apps/types.get';
+import appsUpdateApiKey from '../../../server/routes/json-api/apps/updateApiKey.post';
+import appService from '../../../server/service/appService';
+import { appFeatures } from '../../../server/types/AppType';
+import { ApiError } from '../../../server/types/responses/ApiResponse';
+import { AppFormValidator } from '../../../server/validators/AppFormValidator';
+import { h3Server } from '../../helpers/h3App';
 
-jest.mock('../../../src/service/appService');
-jest.mock('../../../src/validators/AppFormValidator');
+jest.mock('../../../server/service/appService');
+jest.mock('../../../server/validators/AppFormValidator');
 
-const app = express();
-app.use(express.json());
-app.use('/', router);
+const app = h3Server((r) => {
+    r.get('/', appsGet);
+    r.post('/', appsPost);
+    r.put('/', appsPut);
+    r.delete('/', appsDelete);
+    r.get('/types', appsTypes);
+    r.post('/test', appsTest);
+    r.post('/updateApiKey', appsUpdateApiKey);
+});
 
 describe('App Router', () => {
     beforeEach(() => {

@@ -1,7 +1,7 @@
-import RedisCacheService from '../../src/service/redis/redisCacheService';
-import { redis } from '../../src/service/redis/redisService';
+import RedisCacheService from '../../server/service/redis/redisCacheService';
+import { redis } from '../../server/service/redis/redisService';
 
-jest.mock('../../src/service/redis/redisService', () => ({
+jest.mock('../../server/service/redis/redisService', () => ({
     redis: {
         get: jest.fn(),
         keys: jest.fn(),

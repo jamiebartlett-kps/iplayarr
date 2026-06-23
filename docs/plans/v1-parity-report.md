@@ -125,7 +125,7 @@ Every original Vue Router route resolves to a Nuxt page (build emits all routes)
 | G6 | OIDC flows not runtime-verified | Faithful port; needs a live IdP. |
 | G7 | `/api` search/RSS, `/json-api` search/details/download/test, app integrations | Logic verbatim; need `get_iplayer`/BBC/live *arr/SAB to exercise. Covered by Jest. |
 | G8 | Socket.IO realtime end-to-end (queue/history/log push) | `/socket.io/` polling endpoint returns 200; `socketService` reused verbatim. Full client round-trip needs a browser. |
-| G9 | Legacy `src/` and `frontend/` retained | Kept so the 367-test Jest suite (which targets `src/` and the express routes) keeps providing regression coverage. Full removal is gated on porting the express route/endpoint tests to the h3 handlers. |
+| G9 | Legacy `src/` and `frontend/` removed | **Resolved** — route/endpoint/service tests retargeted to `server/`; the express route tests were rewritten against the h3 handlers (via `tests/helpers/h3App.ts` + supertest). `src/`, `frontend/`, and dead deps pruned. |
 | G10 | `getHost()` returns `''` (same-origin); socket uses `io()`; OIDC debug `:8080`/`:4404` repoints | Required by FE+BE unification (D12); same effective requests. |
 
 ---
@@ -141,4 +141,6 @@ Every original Vue Router route resolves to a Nuxt page (build emits all routes)
 ## 6. Recommended closing steps (not yet done)
 1. Browser walkthrough of all 13 routes for visual/interactive parity (G5/G8).
 2. Live verification of OIDC, search/download, and app integrations against real services (G6/G7).
-3. Port the express route/endpoint Jest tests to the h3 handlers, then delete `src/` and `frontend/` (G9).
+3. ✅ Done — route/endpoint/service tests retargeted to `server/` (route handlers
+   exercised via an h3-app + supertest helper), legacy `src/`+`frontend/` deleted,
+   dead deps pruned. `npm test` → 367 pass.

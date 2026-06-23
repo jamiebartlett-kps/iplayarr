@@ -1,19 +1,19 @@
 // tests/facade/searchFacade.test.ts
 
-import searchFacade from '../../src/facade/searchFacade';
-import configService from '../../src/service/configService';
-import RedisCacheService from '../../src/service/redis/redisCacheService';
-import getIplayerSearchService from '../../src/service/search/GetIplayerSearchService';
-import nativeSearchService from '../../src/service/search/NativeSearchService';
-import synonymService from '../../src/service/synonymService';
-import { IPlayerSearchResult } from '../../src/types/IPlayerSearchResult';
+import searchFacade from '../../server/facade/searchFacade';
+import configService from '../../server/service/configService';
+import RedisCacheService from '../../server/service/redis/redisCacheService';
+import getIplayerSearchService from '../../server/service/search/GetIplayerSearchService';
+import nativeSearchService from '../../server/service/search/NativeSearchService';
+import synonymService from '../../server/service/synonymService';
+import { IPlayerSearchResult } from '../../server/types/IPlayerSearchResult';
 
 // Mock dependencies
-jest.mock('../../src/service/configService');
-jest.mock('../../src/service/redis/redisCacheService');
-jest.mock('../../src/service/synonymService');
-jest.mock('../../src/service/search/NativeSearchService');
-jest.mock('../../src/service/search/GetIplayerSearchService');
+jest.mock('../../server/service/configService');
+jest.mock('../../server/service/redis/redisCacheService');
+jest.mock('../../server/service/synonymService');
+jest.mock('../../server/service/search/NativeSearchService');
+jest.mock('../../server/service/search/GetIplayerSearchService');
 
 describe('SearchFacade', () => {
   const mockResults: IPlayerSearchResult[] = [

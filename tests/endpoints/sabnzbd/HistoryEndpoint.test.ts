@@ -1,15 +1,15 @@
 import { NextFunction, Request, Response } from 'express';
 
-import handler from '../../../src/endpoints/sabnzbd/HistoryEndpoint';
-import configService from '../../../src/service/configService';
-import historyService from '../../../src/service/historyService';
-import { IplayarrParameter } from '../../../src/types/IplayarrParameters';
-import { VideoType } from '../../../src/types/IPlayerSearchResult';
-import { QueueEntry } from '../../../src/types/QueueEntry';
-import { QueueEntryStatus } from '../../../src/types/responses/sabnzbd/QueueResponse';
+import handler from '../../../server/endpoints/sabnzbd/HistoryEndpoint';
+import configService from '../../../server/service/configService';
+import historyService from '../../../server/service/historyService';
+import { IplayarrParameter } from '../../../server/types/IplayarrParameters';
+import { VideoType } from '../../../server/types/IPlayerSearchResult';
+import { QueueEntry } from '../../../server/types/QueueEntry';
+import { QueueEntryStatus } from '../../../server/types/responses/sabnzbd/QueueResponse';
 
-jest.mock('../../../src/service/configService');
-jest.mock('../../../src/service/historyService');
+jest.mock('../../../server/service/configService');
+jest.mock('../../../server/service/historyService');
 
 describe('sabnzbdActionEndpoint', () => {
     let req: Partial<Request>;

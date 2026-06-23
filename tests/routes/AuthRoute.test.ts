@@ -1,40 +1,34 @@
-import express from 'express';
-import session from 'express-session';
 import request from 'supertest';
 
-import AuthRoute, { addAuthMiddleware } from '../../src/routes/AuthRoute';
-import configService from '../../src/service/configService';
-import { IplayarrParameter } from '../../src/types/IplayarrParameters';
-import { ApiError } from '../../src/types/responses/ApiResponse';
-import * as Utils from '../../src/utils/Utils';
+import generateToken from '../../server/routes/auth/generateToken.get';
+import login from '../../server/routes/auth/login.post';
+import logout from '../../server/routes/auth/logout.get';
+import me from '../../server/routes/auth/me.get';
+import resetPassword from '../../server/routes/auth/resetPassword.post';
+import configService from '../../server/service/configService';
+import { IplayarrParameter } from '../../server/types/IplayarrParameters';
+import { ApiError } from '../../server/types/responses/ApiResponse';
+import * as Utils from '../../server/utils/Utils';
+import { h3Server } from '../helpers/h3App';
 
-jest.mock('../../src/service/configService');
+jest.mock('../../server/service/configService');
 jest.mock('uuid', () => ({ v4: () => 'mock-token' }));
-jest.mock('openid-client', () => {});
 
 // Bcrypt hash of 'password' (pre-computed for deterministic tests)
 const BCRYPT_HASH_PASSWORD = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
-describe('AuthRoute', () => {
-    let app: express.Express;
+const app = h3Server((r) => {
+    r.post('/login', login);
+    r.get('/logout', logout);
+    r.get('/me', me);
+    r.get('/generateToken', generateToken);
+    r.post('/resetPassword', resetPassword);
+});
 
+describe('AuthRoute', () => {
     beforeEach(() => {
         jest.restoreAllMocks();
-
-        app = express();
-        app.use(express.json());
-
-        // Minimal in-memory session
-        app.use(
-            session({
-                secret: 'test',
-                resave: false,
-                saveUninitialized: false,
-            })
-        );
-
-        addAuthMiddleware(app);
-        app.use('/', AuthRoute);
+        jest.clearAllMocks();
     });
 
     describe('POST /login', () => {
@@ -76,16 +70,11 @@ describe('AuthRoute', () => {
             expect(res.body).toEqual({ status: true });
             // Should have migrated the password to bcrypt
             expect(Utils.hashPassword).toHaveBeenCalledWith('password');
-            expect(configService.setParameter).toHaveBeenCalledWith(
-                IplayarrParameter.AUTH_PASSWORD,
-                BCRYPT_HASH_PASSWORD
-            );
+            expect(configService.setParameter).toHaveBeenCalledWith(IplayarrParameter.AUTH_PASSWORD, BCRYPT_HASH_PASSWORD);
         });
 
         it('should fail login with incorrect credentials (bcrypt)', async () => {
-            (configService.getParameter as jest.Mock)
-                .mockResolvedValueOnce('admin')
-                .mockResolvedValueOnce(BCRYPT_HASH_PASSWORD);
+            (configService.getParameter as jest.Mock).mockResolvedValueOnce('admin').mockResolvedValueOnce(BCRYPT_HASH_PASSWORD);
 
             jest.spyOn(Utils, 'isLegacyMD5Hash').mockReturnValue(false);
             jest.spyOn(Utils, 'comparePassword').mockResolvedValue(false);
@@ -116,9 +105,7 @@ describe('AuthRoute', () => {
         });
 
         it('should fail login with wrong username', async () => {
-            (configService.getParameter as jest.Mock)
-                .mockResolvedValueOnce('admin')
-                .mockResolvedValueOnce(BCRYPT_HASH_PASSWORD);
+            (configService.getParameter as jest.Mock).mockResolvedValueOnce('admin').mockResolvedValueOnce(BCRYPT_HASH_PASSWORD);
 
             const res = await request(app).post('/login').send({
                 username: 'wrong',
@@ -147,9 +134,7 @@ describe('AuthRoute', () => {
         it('should return user info if logged in', async () => {
             const agent = request.agent(app);
 
-            (configService.getParameter as jest.Mock)
-                .mockResolvedValueOnce('admin')
-                .mockResolvedValueOnce(BCRYPT_HASH_PASSWORD);
+            (configService.getParameter as jest.Mock).mockResolvedValueOnce('admin').mockResolvedValueOnce(BCRYPT_HASH_PASSWORD);
 
             jest.spyOn(Utils, 'isLegacyMD5Hash').mockReturnValue(false);
             jest.spyOn(Utils, 'comparePassword').mockResolvedValue(true);

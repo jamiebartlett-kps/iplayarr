@@ -1,13 +1,13 @@
 import { Request, Response } from 'express';
 
-import DownloadEndpoint from '../../../src/endpoints/generic/DownloadEndpoint';
-import iplayerDetailsService from '../../../src/service/iplayerDetailsService';
-import queueService from '../../../src/service/queueService';
-import { VideoType } from '../../../src/types/IPlayerSearchResult';
-import { IPlayerMetadataResponse } from '../../../src/types/responses/IPlayerMetadataResponse';
+import DownloadEndpoint from '../../../server/endpoints/generic/DownloadEndpoint';
+import iplayerDetailsService from '../../../server/service/iplayerDetailsService';
+import queueService from '../../../server/service/queueService';
+import { VideoType } from '../../../server/types/IPlayerSearchResult';
+import { IPlayerMetadataResponse } from '../../../server/types/responses/IPlayerMetadataResponse';
 
-jest.mock('../../../src/service/iplayerDetailsService');
-jest.mock('../../../src/service/queueService');
+jest.mock('../../../server/service/iplayerDetailsService');
+jest.mock('../../../server/service/queueService');
 
 describe('DownloadEndpoint', () => {
     let req: Partial<Request>;

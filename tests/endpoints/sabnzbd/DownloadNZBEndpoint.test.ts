@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 
-import DownloadNZBEndpoint from '../../../src/endpoints/sabnzbd/DownloadNZBEndpoint';
-import { VideoType } from '../../../src/types/IPlayerSearchResult'; // Adjust the path as needed
+import DownloadNZBEndpoint from '../../../server/endpoints/sabnzbd/DownloadNZBEndpoint';
+import { VideoType } from '../../../server/types/IPlayerSearchResult'; // Adjust the path as needed
 
 jest.mock('xml2js', () => {
     return {

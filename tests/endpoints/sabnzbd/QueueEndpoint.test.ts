@@ -1,15 +1,15 @@
 import { NextFunction, Request, Response } from 'express';
 
-import handler from '../../../src/endpoints/sabnzbd/QueueEndpoint';
-import configService from '../../../src/service/configService';
-import historyService from '../../../src/service/historyService';
-import queueService from '../../../src/service/queueService';
-import { QueueEntryStatus } from '../../../src/types/responses/sabnzbd/QueueResponse';
+import handler from '../../../server/endpoints/sabnzbd/QueueEndpoint';
+import configService from '../../../server/service/configService';
+import historyService from '../../../server/service/historyService';
+import queueService from '../../../server/service/queueService';
+import { QueueEntryStatus } from '../../../server/types/responses/sabnzbd/QueueResponse';
 
 
-jest.mock('../../../src/service/configService');
-jest.mock('../../../src/service/queueService');
-jest.mock('../../../src/service/historyService');
+jest.mock('../../../server/service/configService');
+jest.mock('../../../server/service/queueService');
+jest.mock('../../../server/service/historyService');
 
 describe('AbstractSabNZBDActionEndpoint', () => {
     let req: Partial<Request>;
