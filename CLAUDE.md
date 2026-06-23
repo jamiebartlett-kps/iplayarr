@@ -67,5 +67,22 @@ public/                 favicon, icons, img, shortcuts (ported from frontend/pub
 
 ## Status
 - ✅ Phase 1 — plan committed (`docs/plans/v1-nuxt-migration.md`).
-- ✅ Phase 2 — scaffold (config, app shell, layout placeholder, assets, builds clean).
-- ⏳ Phase 3+ — backend core, auth, endpoints, then frontend pages/state. See plan §5.
+- ✅ Phase 2 — scaffold (nuxt.config, app shell, assets, PWA; builds clean).
+- ✅ Phase 3 — backend core services/facades/types in `server/`; socket.io + cron
+  plugins; `/ping`. Server boots; verified.
+- ✅ Phase 4 — auth & sessions (h3 `useSession`, `/auth/*`, json-api gate, OIDC).
+  Login/logout/me/gate/none verified end-to-end.
+- ✅ Phase 5 — `/api` endpoints (newznab/sabnzbd) via Express-compat shim;
+  caps/version/config/queue/history/nzb-download/404/401 verified.
+- ✅ Phase 6 — `/json-api/*` endpoints (config/apps/synonym/offSchedule/queue/
+  stats + loose handlers); JSON charset header fixed; verified.
+- ✅ Phase 7 — frontend: `app.vue` (App.vue port, ClientOnly), plugins, auth
+  middleware, lib, 35 components + 12 pages. Builds; app serves.
+- ✅ Phase 8 — Docker/CI point at the Nuxt build.
+- 🔚 Parity report: `docs/plans/v1-parity-report.md`. Remaining: browser UI walk,
+  live OIDC/search/integration checks, port route/endpoint tests then delete
+  `src/` + `frontend/`.
+
+The legacy `src/` (Express) and `frontend/` (Vue SPA) are intentionally retained
+for now: the Jest suite (367 tests) still targets them. Build & runtime use only
+the Nuxt app (`nuxt.config.ts`, `app/`, `server/`).
