@@ -87,9 +87,9 @@ public/                 favicon, icons, img, shortcuts (ported from frontend/pub
   each test. Persistence service tests run against this real DB.
 - The CommonJS `tsconfig.json` is retained for ts-jest; Nuxt uses its generated
   `.nuxt/tsconfig.json`.
-- Known: `tests/facade/downloadFacade.test.ts` fails to load on Node 22 due to a
-  `tmp`/`fengari` (ioredis-mock) `constants.O_CREAT` issue — pre-existing on
-  `main`, unrelated to app code; all 367 tests pass.
+- Full suite is green: **363 tests / 53 suites pass**. (The old `downloadFacade`
+  load failure was the `ioredis-mock`→`fengari`→`tmp` `constants.O_CREAT` crash;
+  it's gone now that persistence no longer uses Redis and `ioredis-mock` was dropped.)
 
 ## Status
 - ✅ Phase 1 — plan committed (`docs/plans/v1-nuxt-migration.md`).

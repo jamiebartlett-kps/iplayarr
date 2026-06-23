@@ -1,5 +1,4 @@
 jest.mock('dotenv');
-jest.mock('ioredis', () => jest.requireActual('ioredis-mock'));
 
 // Expose h3/Nitro auto-imported helpers (defineEventHandler, getQuery, readBody,
 // setResponseStatus, getRouterParam, ...) as globals so the server/ route
