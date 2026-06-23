@@ -18,6 +18,13 @@ export default defineNuxtConfig({
 
     modules: ['@vite-pwa/nuxt'],
 
+    // Required for the socket.io engine.io websocket hook (server/plugins/socket.io.ts).
+    nitro: {
+        experimental: {
+            websocket: true,
+        },
+    },
+
     css: ['~/assets/styles/global.less'],
 
     app: {
