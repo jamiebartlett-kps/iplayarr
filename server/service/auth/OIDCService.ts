@@ -1,11 +1,15 @@
-import { Request } from 'express';
-import * as client from 'openid-client'
+import { getRequestURL, type H3Event } from 'h3';
+import * as client from 'openid-client';
 
 import { IplayarrParameter } from '../../types/IplayarrParameters';
+import { getIpSession } from '../../utils/session';
 import configService from '../configService';
 
+// Ported from the Express version: `req: Request` -> `event: H3Event`, session
+// access via getIpSession (h3), and the request URL via getRequestURL(event).
+// OIDC flow logic, PKCE, state payload and behaviour are otherwise unchanged.
 class OIDCService {
-    async oidcConnection(req: Request, configUrl: string, clientId: string, clientSecret: string, callback_host: string, mode: string = 'login'): Promise<string> {
+    async oidcConnection(event: H3Event, configUrl: string, clientId: string, clientSecret: string, callback_host: string, mode: string = 'login'): Promise<string> {
         const config: client.Configuration = await client.discovery(
             new URL(configUrl),
             clientId,
@@ -13,7 +17,6 @@ class OIDCService {
         )
 
         const codeVerifier = client.randomPKCECodeVerifier()
-        req.session.codeVerifier = codeVerifier
         const code_challenge = await client.calculatePKCECodeChallenge(codeVerifier)
         const statePayload = {
             mode,
@@ -21,7 +24,9 @@ class OIDCService {
             nonce: client.randomState()
         };
         const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
-        req.session.state = state
+
+        const session = await getIpSession(event);
+        await session.update({ codeVerifier, state });
 
         const parameters: Record<string, string> = {
             redirect_uri: `${callback_host}/auth/oidc/callback`,
@@ -34,7 +39,7 @@ class OIDCService {
         return client.buildAuthorizationUrl(config, parameters).toString();
     }
 
-    async getAuthURL(req: Request): Promise<string | undefined> {
+    async getAuthURL(event: H3Event): Promise<string | undefined> {
         const [configUrl, clientId, clientSecret, callbackHost] = (await configService.getParameters(
             IplayarrParameter.OIDC_CONFIG_URL,
             IplayarrParameter.OIDC_CLIENT_ID,
@@ -42,10 +47,10 @@ class OIDCService {
             IplayarrParameter.OIDC_CALLBACK_HOST
         )) as string[];
 
-        return await this.oidcConnection(req, configUrl, clientId, clientSecret, callbackHost);
+        return await this.oidcConnection(event, configUrl, clientId, clientSecret, callbackHost);
     }
 
-    async getUserEmail(req: Request, configUrl: string, clientId: string, clientSecret: string): Promise<string | undefined> {
+    async getUserEmail(event: H3Event, configUrl: string, clientId: string, clientSecret: string): Promise<string | undefined> {
         try {
             const config: client.Configuration = await client.discovery(
                 new URL(configUrl),
@@ -53,13 +58,14 @@ class OIDCService {
                 clientSecret,
             )
 
-            const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+            const session = await getIpSession(event);
+            const fullUrl = getRequestURL(event).href;
             const tokens: client.TokenEndpointResponse = await client.authorizationCodeGrant(
                 config,
                 new URL(fullUrl),
                 {
-                    pkceCodeVerifier: req.session.codeVerifier,
-                    expectedState: req.session.state
+                    pkceCodeVerifier: session.data.codeVerifier,
+                    expectedState: session.data.state
                 },
             )
 
@@ -81,7 +87,7 @@ class OIDCService {
         }
     }
 
-    async validateUser(req: Request): Promise<string | undefined> {
+    async validateUser(event: H3Event): Promise<string | undefined> {
         try {
             const [configUrl, clientId, clientSecret] = (await configService.getParameters(
                 IplayarrParameter.OIDC_CONFIG_URL,
@@ -95,13 +101,14 @@ class OIDCService {
                 clientSecret,
             )
 
-            const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+            const session = await getIpSession(event);
+            const fullUrl = getRequestURL(event).href;
             const tokens: client.TokenEndpointResponse = await client.authorizationCodeGrant(
                 config,
                 new URL(fullUrl),
                 {
-                    pkceCodeVerifier: req.session.codeVerifier,
-                    expectedState: req.session.state
+                    pkceCodeVerifier: session.data.codeVerifier,
+                    expectedState: session.data.state
                 },
             )
 
